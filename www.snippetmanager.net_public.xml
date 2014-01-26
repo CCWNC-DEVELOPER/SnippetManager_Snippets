@@ -1,0 +1,2551 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dictionary>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Serialize</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Serializing using C#</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Serialize</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Serializing using C#</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Serializable, Serialize, Serializer, NonSerialized, Serializing, Serialized, Serializable</Keywords>
+        <Imports>using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Xml.Serialization;
+using System.IO;</Imports>
+        <Code>[Serializable()]
+public class InnerSerializeTest
+{
+    private List&lt;string&gt; settings = new List&lt;string&gt;();
+    public List&lt;string&gt; InnerSettings
+    {
+        get { return settings; }
+        set { settings = value; }
+    }
+}
+
+[Serializable()]
+public class SerializeTest
+{
+
+    private InnerSerializeTest m_innerSerializeTest = new InnerSerializeTest();
+    public InnerSerializeTest InnerTest
+    {
+        get { return m_innerSerializeTest; }
+        set { m_innerSerializeTest = value; }
+    }
+
+    private string m_test;
+    public string TestProperty
+    {
+        get { return m_test; }
+        set { m_test = value; }
+    }
+
+    private List&lt;string&gt; settings = new List&lt;string&gt;();
+    public List&lt;string&gt; Settings
+    {
+        get { return settings; }
+        set { settings = value; }
+    }
+
+    // This will not be serialized
+    [NonSerialized()]
+    private int notSerialized = 1;
+
+
+
+    public void TryThisExample()
+    {
+
+        // Create an instance and store values
+        SerializeTest test = new SerializeTest();
+        test.TestProperty = "test 123";
+        test.Settings.Add("ABC");
+        test.Settings.Add("DEF");
+        test.Settings.Add("GHI");
+
+        test.InnerTest.InnerSettings.Add("Inner class test 1");
+        test.InnerTest.InnerSettings.Add("Inner class test 2");
+
+
+        // Save the data to XML format
+        XmlSerializer SerializerOut = new XmlSerializer(typeof(SerializeTest));
+        TextWriter WriteFileStream = new StreamWriter(@"C:\test.xml");
+        SerializerOut.Serialize(WriteFileStream, test);
+        WriteFileStream.Close();
+
+
+        // Read the XML file into a new object
+        XmlSerializer SerializerIn = new XmlSerializer(typeof(SerializeTest));
+        FileStream fs = new FileStream(@"C:\test.xml", FileMode.Open, FileAccess.Read, FileShare.Read);
+        SerializeTest loadTest = (SerializeTest)SerializerIn.Deserialize(fs);
+        fs.Close();
+
+
+        // Examine the loaded values
+        string temp = (loadTest.TestProperty);
+        foreach (string Setting in loadTest.Settings)
+            temp = Setting;
+
+        foreach (string InnerSetting in loadTest.InnerTest.InnerSettings)
+            temp = InnerSetting;
+
+    }
+
+
+}</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Reflection</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Reflection to walk objects</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Reflection</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Reflection to walk objects</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Reflection, Primitive, Primitives, Walk Objects</Keywords>
+        <Imports>using System;
+using System.Text;
+using System.ComponentModel;
+using System.Windows.Forms;
+using System.Reflection;
+using System.Collections.Generic;
+using System.Collections;
+using System.Data;
+</Imports>
+        <Code>
+// Shows how to walk through objects recursively for building a treeview control.
+
+public class TreeBuilder
+{
+
+    static TreeBuilderBase imp = new TreeBuilderBase();
+
+    static public TreeNode ToTree(object obj)
+    {
+        return imp.ToTree(obj, obj.GetType().Name);
+    }
+
+    static public TreeNode ToTree(object obj, string name)
+    {
+        return imp.ToTree(obj, name);
+    }
+
+}
+
+class TreeBuilderBase
+{
+
+    static PrimitiveTable primitives = new PrimitiveTable();
+
+    protected virtual TreeNode WalkObject(object obj, string name)
+    {
+
+        TreeNode node = ObjectToNode(obj, name);
+
+        FieldInfo f;
+        Type t = obj.GetType();
+        MemberInfo[] allMembers = t.GetMembers();
+        foreach (MemberInfo m in allMembers)
+        {
+
+            if (!IsDisplayable(m)) continue;
+
+            f = (FieldInfo)m;
+            object o = f.GetValue(obj);
+
+            if (o is Array)
+            {
+                object[] ar = (object[])o;  //FIXME - we can only deal with one dimensional arrays
+                foreach (object i in ar)
+                {
+                    node.Nodes.Add(ToTree(i, f.Name));
+                }
+            }
+            else
+            {
+                node.Nodes.Add(ToTree(o, f.Name));
+            }
+        }
+
+        return node;
+    }
+
+    protected virtual TreeNode ObjectToNode(object o, string name)
+    {
+        return new TreeNode(name);
+    }
+
+    public virtual TreeNode ToTree(object o, string name)
+    {
+        if (primitives.IsType(o))
+            return PrimitiveToNode(o, name, o.ToString());
+        else
+            return WalkObject(o, name);
+    }
+
+    protected virtual bool IsDisplayable(MemberInfo m)
+    {
+
+        if (!(m is FieldInfo))
+            return false;
+
+        FieldInfo f = (FieldInfo)m;
+
+        if (!f.IsPublic)
+            return false;
+
+        return true;
+    }
+
+    protected virtual TreeNode PrimitiveToNode(object o, string name, string currentValue)
+    {
+        return new TreeNode(name + "=" + currentValue);
+    }
+
+}
+
+class PrimitiveTable
+{
+
+    Hashtable table;
+
+    public PrimitiveTable()
+    {
+
+        string yes = "yes";
+        table = new Hashtable();
+        sbyte i1 = 0; table.Add(i1.GetType(), yes);
+        short i2 = 0; table.Add(i2.GetType(), yes);
+        int i3 = 0; table.Add(i3.GetType(), yes);
+        long i4 = 0; table.Add(i4.GetType(), yes);
+
+        byte i5 = 0; table.Add(i5.GetType(), yes);
+        ushort i6 = 0; table.Add(i6.GetType(), yes);
+        uint i7 = 0; table.Add(i7.GetType(), yes);
+        ulong i8 = 0; table.Add(i8.GetType(), yes);
+
+        float i9 = 0.0f; table.Add(i9.GetType(), yes);
+        double i10 = 0.0; table.Add(i10.GetType(), yes);
+
+        string i11 = "tmp"; table.Add(i11.GetType(), yes);
+        bool i12 = true; table.Add(i12.GetType(), yes);
+
+    }
+
+    public bool IsType(object obj)
+    {
+        return null != table[obj.GetType()];
+    }
+
+}
+
+
+//----------------------------------------------------------------------
+
+// To test this example:
+
+public class SimpleData
+{
+    public int a = 1;
+    public float b = 33.0f;
+
+    public Child child = new Child();
+}
+
+public class Child
+{
+
+    public string d = "dddddd";
+
+    public SubChild subChild = new SubChild();
+}
+
+public class SubChild
+{
+    public bool b1 = true;
+    public bool b2 = false;
+    public bool b3 = true;
+    public bool b4 = false;
+
+}
+
+
+/*
+    private void Form1_Load(object sender, System.EventArgs e)
+    {
+		
+        SimpleData simpleData = new SimpleData(); // some data class
+
+        //supply the text of the 
+        TreeNode root = TreeBuilder.ToTree( simpleData ); 
+        root.ExpandAll(); 
+
+        treeView1.Nodes.Clear(); 
+        treeView1.Nodes.Add( root  );
+    }
+ */
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Generics</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Generics in C#</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Generics</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Generics in C#</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Generics, generic, &lt;T&gt;, TKey, TValue</Keywords>
+        <Imports>using System;
+using System.Collections.Generic;
+using System.Text;</Imports>
+        <Code>/*
+ * Use generics when you intend to reuse common code 
+ * that should function the same way for any data type.
+ * Simply use &lt;T&gt; as shown below.
+ * You can use multiple alias data types just by adding
+ * a new letter such as class Test&lt;T&gt;&lt;K&gt;, etc.     
+ */
+
+class Test&lt;T&gt;
+{
+    private List&lt;T&gt; values = new List&lt;T&gt;();
+
+    // The default keyword sets a variable 
+    // with the appropriate default value.
+    private T m_defaultExample = default(T);
+
+    public void AddSomething(T value)
+    {
+        values.Add(value);
+    }
+
+
+    public void TryThisExample()
+    {
+        // Simple test:
+        Test&lt;double&gt; test = new Test&lt;double&gt;();
+        test.AddSomething(123);
+
+        // Advanced test:
+        // If you want to specify a default value type, use:
+        // using Test = TestSpace.Test&lt;double&gt;;
+        // This way you can just write:
+        // Test test = new Test();
+        // test.AddSomething(123);
+    }
+
+    // Note (advanced):
+    // You can declare the class with a constraint using the "where" keyword.
+    // class Test&lt;T&gt; where T : new()
+    // new() requires that the parameter T must have a default constructor.
+    // struct requires that the default parameter T must have a ValueType.
+    // class requires that the default parameter T must NOT be a ValueType.
+    // You can also use a name of a class or interface, such as:
+    // class Test&lt;T&gt; where T : IMyInterface
+    // or
+    // class Test&lt;T&gt; where T : MyClass
+
+}
+
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Dictionary</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Dictionary</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Dictionary, Collection, Lookup, Search</Keywords>
+        <Imports>using System.Collections.Generic;</Imports>
+        <Code>// Simple example to show how to use the Dictionary object
+
+class DictionaryTest
+{
+    public void TryThisExample()
+    {
+        // A dictionary allows you to maintain a set of name/value pairs.
+        Dictionary&lt;string, double&gt; dictionary = new Dictionary&lt;string, double&gt;();
+
+        dictionary.Add("Key #1", 123);
+        dictionary.Add("Key #2", 456);
+        dictionary.Add("Key #3", 789);
+
+        // Now you can retrieve a value by key:            
+        if (dictionary.ContainsKey("Key #2"))
+        {
+            double value = dictionary["Key #2"];
+            Console.WriteLine(value);
+        }
+    }
+
+}
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Delegates</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Delegates</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Delegate, Delegates, Delegation, Delegating, Callback, Callbacks</Keywords>
+        <Imports>using System.Collections.Generic;</Imports>
+        <Code>public delegate int TestDelegate(int x, int y);
+
+class DelegateTest
+{
+    public static int Add(int x, int y)
+    {
+        return x + y;
+    }
+
+
+    public void TryThisExample()
+    {
+        // Create an object that points to the Add function.
+        TestDelegate addSomething = new TestDelegate(DelegateTest.Add);
+
+        // Indirectly invoke the Add method using a delegate object.
+        Console.Write("1 + 2 is {0}", addSomething(1, 2));
+    }
+}
+
+// See also CallbackTest.cs
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Serializable Dictionary</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Serializable Dictionary</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Serializable Dictionary, Serialize Dictionary, Serialize, Dictionary, IXmlSerializable</Keywords>
+        <Imports>using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Xml.Serialization;
+</Imports>
+        <Code>// A custom dictionary that is serializable and features multiple keys
+
+[Serializable]
+public class ItemValue
+{
+    public ItemKey Key { get; set; }
+    public string SomeText { get; set; }
+
+    public ItemValue()
+    {
+    }
+
+    public ItemValue(string key1, string key2)
+    {
+        Key = new ItemKey(key1, key2);
+    }
+}
+
+
+public class ItemKey
+{
+    public string SomeKey1 { get; set; }
+    public string SomeKey2 { get; set; }
+
+    public ItemKey()
+    {
+    }
+
+    public ItemKey(string key1, string key2)
+    {
+        SomeKey1 = key1;
+        SomeKey2 = key2;
+    }
+
+    public class EqualityComparer : IEqualityComparer&lt;ItemKey&gt;
+    {
+
+        bool IEqualityComparer&lt;ItemKey&gt;.Equals(ItemKey x, ItemKey y)
+        {
+            return x.SomeKey1 == y.SomeKey1 &amp;&amp; x.SomeKey2 == y.SomeKey2;
+        }
+
+        int IEqualityComparer&lt;ItemKey&gt;.GetHashCode(ItemKey obj)
+        {
+            if (obj == null) return 0;
+            if ((!(obj is ItemKey))) return 0;
+            ItemKey key = (ItemKey)obj;
+            unchecked
+            {
+                int result = (key.SomeKey1 != null ? key.SomeKey1.GetHashCode() : 0);
+                result += (key.SomeKey2 != null ? key.SomeKey2.GetHashCode() : 0);
+                return result;
+            }
+        }
+
+
+    }
+
+}
+
+
+[XmlRoot("dictionary")]
+public class SerializableDictionary&lt;TKey, TValue&gt;
+    : Dictionary&lt;TKey, TValue&gt;, IXmlSerializable
+{
+
+    public SerializableDictionary()
+
+        : base()
+    {
+
+    }
+
+    public SerializableDictionary(IDictionary&lt;TKey, TValue&gt; dictionary)
+
+        : base(dictionary)
+    {
+
+    }
+
+    public SerializableDictionary(IEqualityComparer&lt;TKey&gt; comparer)
+
+        : base(comparer)
+    {
+
+    }
+
+    public SerializableDictionary(int capacity)
+
+        : base(capacity)
+    {
+
+    }
+
+    public SerializableDictionary(IDictionary&lt;TKey, TValue&gt; dictionary, IEqualityComparer&lt;TKey&gt; comparer)
+
+        : base(dictionary, comparer)
+    {
+
+    }
+
+    public SerializableDictionary(int capacity, IEqualityComparer&lt;TKey&gt; comparer)
+
+        : base(capacity, comparer)
+    {
+
+    }
+
+    public System.Xml.Schema.XmlSchema GetSchema()
+    {
+        return null;
+    }
+
+    public void ReadXml(System.Xml.XmlReader reader)
+    {
+        XmlSerializer keySerializer = new XmlSerializer(typeof(TKey));
+        XmlSerializer valueSerializer = new XmlSerializer(typeof(TValue));
+
+        bool wasEmpty = reader.IsEmptyElement;
+        reader.Read();
+        if (wasEmpty) return;
+
+        while (reader.NodeType != System.Xml.XmlNodeType.EndElement)
+        {
+            reader.ReadStartElement("item");
+            reader.ReadStartElement("key");
+            TKey key = (TKey)keySerializer.Deserialize(reader);
+            reader.ReadEndElement();
+
+            reader.ReadStartElement("value");
+            TValue value = (TValue)valueSerializer.Deserialize(reader);
+            reader.ReadEndElement();
+            this.Add(key, value);
+
+            reader.ReadEndElement();
+            reader.MoveToContent();
+        }
+        reader.ReadEndElement();
+    }
+
+
+    public void WriteXml(System.Xml.XmlWriter writer)
+    {
+        XmlSerializer keySerializer = new XmlSerializer(typeof(TKey));
+        XmlSerializer valueSerializer = new XmlSerializer(typeof(TValue));
+
+        foreach (TKey key in this.Keys)
+        {
+            writer.WriteStartElement("item");
+            writer.WriteStartElement("key");
+            keySerializer.Serialize(writer, key);
+            writer.WriteEndElement();
+
+            writer.WriteStartElement("value");
+            TValue value = this[key];
+            valueSerializer.Serialize(writer, value);
+            writer.WriteEndElement();
+            writer.WriteEndElement();
+        }
+    }
+
+}
+
+
+
+class TestCustomDictionary
+{
+
+    public void TryThisExample()
+    {
+        SerializableDictionary&lt;ItemKey, ItemValue&gt; items = new
+            SerializableDictionary&lt;ItemKey, ItemValue&gt;(new ItemKey.EqualityComparer());
+
+        ItemValue item = new ItemValue();
+        item.Key = new ItemKey();
+        item.Key.SomeKey1 = "abc";
+        item.Key.SomeKey2 = "123";
+        item.SomeText = "Test 1";
+        items.Add(item.Key, item);
+
+        item = new ItemValue();
+        item.Key = new ItemKey();
+        item.Key.SomeKey1 = "def";
+        item.Key.SomeKey2 = "456";
+        item.SomeText = "Test 2";
+        items.Add(item.Key, item);
+
+
+        // Try to get an item
+        item = new ItemValue();
+        item.Key = new ItemKey();
+        item.Key.SomeKey1 = "def";
+        item.Key.SomeKey2 = "456";
+
+        item = items[item.Key];
+
+    }
+
+
+
+}</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>IComparable</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>IComparable</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Compare, Comparer, Comparable, IComparable</Keywords>
+        <Imports>using System.Collections.Generic</Imports>
+        <Code>// This is a simple example of IComparable for sorting, using one sort order.    
+
+class CompareTest : IComparable
+{
+    public int SomeProperty { get; set; }
+
+    public CompareTest() { }
+    public CompareTest(int Value)
+    {
+        SomeProperty = Value;
+    }
+
+    // You can add more sort orders by adding additional objects, such as
+    // public int CompareTo(object obj1, object obj2, etc.)
+    public int CompareTo(object obj)
+    {
+        CompareTest temp = (CompareTest)obj;
+        if (this.SomeProperty &gt; temp.SomeProperty)
+            return 1;
+
+        if (this.SomeProperty &lt; temp.SomeProperty)
+            return -1;
+        else
+            return 0;
+    }
+
+    public void TryThisExample()
+    {
+        // Simple example:
+        // Create a new array or list and sort it;
+        List&lt;CompareTest&gt; test = new List&lt;CompareTest&gt;();
+        test.Add(new CompareTest(123));
+        test.Add(new CompareTest(789));
+        test.Add(new CompareTest(456));
+        test.Sort();
+        foreach (CompareTest value in test)
+        {
+            Console.WriteLine(value.SomeProperty);
+        }
+
+    }
+
+}
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Custom Collection using IEnumerable</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Custom Collection using IEnumerable</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Collection, IEnumerable, GetEnumerator, IEnumerator</Keywords>
+        <Imports>using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;</Imports>
+        <Code>// Example adapted from MSDN showing how to use IEnumerable and IEnumerator
+
+public class CollectionTestItem
+{
+    public CollectionTestItem(string Name, double Value)
+    {
+        this.Name = Name;
+        this.Value = Value;
+    }
+
+    public string Name;
+    public double Value;
+}
+
+public class CollectionTest : IEnumerable
+{
+    private CollectionTestItem[] m_items;
+    public CollectionTest(CollectionTestItem[] pArray)
+    {
+        m_items = new CollectionTestItem[pArray.Length];
+
+        for (int i = 0; i &lt; pArray.Length; i++)
+        {
+            m_items[i] = pArray[i];
+        }
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return new CollectionTestEnum(m_items);
+    }
+
+}
+
+public class CollectionTestEnum : IEnumerator
+{
+    public CollectionTestItem[] m_items;
+
+    // Enumerators are positioned before the first element
+    // until the first MoveNext() call.
+    int position = -1;
+
+    public CollectionTestEnum(CollectionTestItem[] list)
+    {
+        m_items = list;
+    }
+
+    public bool MoveNext()
+    {
+        position++;
+        return (position &lt; m_items.Length);
+    }
+
+    public void Reset()
+    {
+        position = -1;
+    }
+
+    public object Current
+    {
+        get
+        {
+            try
+            {
+                return m_items[position];
+            }
+            catch (IndexOutOfRangeException)
+            {
+                throw new InvalidOperationException();
+            }
+        }
+    }
+}
+
+
+public class CollectionTestExample
+{
+    public void TryThisExample()
+    {
+
+        CollectionTestItem[] itemArray = new CollectionTestItem[3]
+            {
+                new CollectionTestItem("A", 1),
+                new CollectionTestItem("B", 2),
+                new CollectionTestItem("C", 3),
+            };
+
+        CollectionTest itemList = new CollectionTest(itemArray);
+        foreach (CollectionTestItem p in itemList)
+            Console.WriteLine(p.Name + " " + p.Value);
+    }
+}
+
+
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Using ICloneable to make a deep copy</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Using ICloneable to make a deep copy</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Deep copy, clone, ICloneable</Keywords>
+        <Imports>using System;
+using System.Collections.Generic;
+using System.Text;</Imports>
+        <Code>// Shows how to return a deep copy clone of an object.
+
+class CloneTest : ICloneable
+{
+    public int SomeProperty { get; set; }
+
+    public object Clone()
+    {
+        CloneTest clone = new CloneTest();
+        clone.SomeProperty = this.SomeProperty;
+        return clone;
+
+        // If we only have properties to clone then we 
+        // could simplify by returning a "shallow" copy:
+        //return this.MemberwiseClone(); 
+    }
+
+    public void TryThisExample()
+    {
+        // Clone an object
+        CloneTest original = new CloneTest();
+        original.SomeProperty = 123;
+
+        CloneTest clone = (CloneTest)original.Clone();
+
+        // Now both will have the same state:
+        Console.Write(original.SomeProperty);
+        Console.Write(clone.SomeProperty);
+
+    }
+}
+
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>General</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Callbacks in C#</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>General</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Callbacks in C#</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>CallBacks, CallBack, Call Back, Delegates, Delegate</Keywords>
+        <Imports>using System.Collections.Generic;</Imports>
+        <Code>// This simple example shows how an interface can be used as a callback mechanism.
+
+public interface ICallbackNotificationTest
+{
+    void OnUpdate(string message);
+}
+
+class CallBackTest : ICallbackNotificationTest
+{
+    public void OnUpdate(string message)
+    {
+        Console.WriteLine(message);
+    }
+
+    public void TryThisExample()
+    {
+        CallBackTestWorker worker = new CallBackTestWorker();
+        worker.Advise(this);
+        worker.Test(); // Simulate asynchronous work being done
+        worker.UnAdvise(this);
+    }
+
+}
+
+class CallBackTestWorker
+{
+    private List&lt;ICallbackNotificationTest&gt; clientSinks
+        = new List&lt;ICallbackNotificationTest&gt;();
+
+    // Subscribe the client (in this example, CallBackTest) so that
+    // it will receive notifications from this worker class.
+    public void Advise(ICallbackNotificationTest sink)
+    {
+        clientSinks.Add(sink);
+    }
+
+    // Remove the client (in this example, CallBackTest) so that
+    // it will not receive any more notifications.
+    public void UnAdvise(ICallbackNotificationTest sink)
+    {
+        clientSinks.Remove(sink);
+    }
+
+    // See the callback in action.
+    public void Test()
+    {
+        foreach (ICallbackNotificationTest client in clientSinks)
+        {
+            client.OnUpdate("It worked");
+        }
+    }
+
+}
+
+// See also Delegates</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Object Oriented</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Abstract classes</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Object Oriented</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Abstract classes</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Abstract, Interface, NotImplementedException</Keywords>
+        <Imports />
+        <Code>/*
+ * An abstract class can contain some common functionality, such as the 
+ * "YouDontHaveToWriteThisFunctionAgain" method. This function can be called
+ * from the class that inherits this AbstractTest class using the base keyword:
+ * base.YouDontHaveToWriteThisFunctionAgain()
+ * Also the class that inherits this AbstractTest class must implement the other
+ * functions marked "abstract". That is, the inheriting class must define its
+ * own function for those abstract members.
+ */
+
+public abstract class AbstractTestBase
+{
+    private const int m_multiplier = 2;
+
+    // The class inheriting AbstractTestBase can call this function by using
+    // the base keyword: base.YouDontHaveToWriteThisFunctionAgain()
+    // If you don't intend to have a common, reusable function like this, then
+    // you shouldn't use an abstract class. Instead, create an interface class.
+    // NOTE: Use the "public" access modifier instead of "protected" if you want
+    // to allow the implimenting class to have direct access to this function.
+    protected int YouDontHaveToWriteThisFunctionAgain(int value)
+    {
+        return value * m_multiplier;
+    }
+
+    // The class inheriting this must implement the following function.
+    // We don't care how it is implemented, just that it is implemented.
+    public abstract void YouMustImplementThis();
+}
+
+
+
+// Now you can inherit from the AbstractTestBase class and use it like this:
+public class TestAbstractClass : AbstractTestBase
+{
+
+    // The key feature of an abstract class is that you can re-use code from the base:
+    public int WrapAndUseAnAbstractMethod(int value)
+    {
+        return base.YouDontHaveToWriteThisFunctionAgain(value);
+    }
+
+    public override void YouMustImplementThis()
+    {
+        // Add your code here for this function!
+        throw new NotImplementedException("You have to write code here");
+    }
+}
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Shortcuts</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Reuse similar code based on keys</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Shortcuts</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Reuse similar code based on keys</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>duplicate, element, switch, reuse</Keywords>
+        <Imports />
+        <Code>foreach (string sName in new[] { "FirstName", "LastName" })
+{
+	List&lt;string&gt; list = sName == "FirstName" ? _first : _last;
+	
+	// Operate on list the same way you would for either key
+	
+}</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Encryption</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Encryption using Tripple DES</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Encryption</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Encryption using Tripple DES</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>TripleDESCryptoServiceProvider, UTF8Encoding, Encrypt, Transform, Decrypt, CryptoTransform, MemoryStream, CryptoStream, Encryption, Secure, Encode</Keywords>
+        <Imports>Imports System.IO
+Imports System.Text
+Imports System.Security.Cryptography</Imports>
+        <Code>Friend Class Security
+
+    Private m_des As New TripleDESCryptoServiceProvider
+    Private m_utf8 As New UTF8Encoding
+    Private m_key() As Byte
+    Private m_iv() As Byte
+
+    Public Sub New(ByVal key() As Byte, ByVal iv() As Byte)
+        Me.m_key = key
+        Me.m_iv = iv
+    End Sub
+
+    Public Sub New()
+        Dim key() As Byte = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
+        Dim iv() As Byte = {8, 7, 6, 5, 4, 3, 2, 1}
+        Me.m_key = key
+        Me.m_iv = iv
+    End Sub
+
+    Public Function Encrypt(ByVal input() As Byte) As Byte()
+        Return Transform(input, m_des.CreateEncryptor(m_key, m_iv))
+    End Function
+
+    Public Function Decrypt(ByVal input() As Byte) As Byte()
+        Return Transform(input, m_des.CreateDecryptor(m_key, m_iv))
+    End Function
+
+    Public Function Encrypt(ByVal text As String) As String
+        Dim input() As Byte = m_utf8.GetBytes(text)
+        Dim output() As Byte = Transform(input, _
+                        m_des.CreateEncryptor(m_key, m_iv))
+        Return Convert.ToBase64String(output)
+    End Function
+
+    Public Function Decrypt(ByVal text As String) As String
+        Dim input() As Byte = Convert.FromBase64String(text)
+        Dim output() As Byte = Transform(input, _
+                         m_des.CreateDecryptor(m_key, m_iv))
+        Return m_utf8.GetString(output)
+    End Function
+
+    Private Function Transform(ByVal input() As Byte, _
+        ByVal CryptoTransform As ICryptoTransform) As Byte()
+        Dim memStream As MemoryStream = New MemoryStream
+        Dim cryptStream As CryptoStream = New _
+            CryptoStream(memStream, CryptoTransform, _
+            CryptoStreamMode.Write)
+        cryptStream.Write(input, 0, input.Length)
+        cryptStream.FlushFinalBlock()
+        memStream.Position = 0
+        Dim result(CType(memStream.Length - 1, System.Int32)) As Byte
+        memStream.Read(result, 0, CType(result.Length, System.Int32))
+        memStream.Close()
+        cryptStream.Close()
+        Return result
+    End Function
+
+End Class</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Serialize</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Serializing using VB.net</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Serialize</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Serializing using VB.net</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Serializable, Serialize, Serializer, NonSerialized, Serializing, Serialized, Serializable</Keywords>
+        <Imports>Imports System
+Imports System.Collections.Generic
+Imports System.Text
+Imports System.Xml.Serialization
+Imports System.IO</Imports>
+        <Code>&lt;Serializable()&gt; _
+Public Class InnerSerializeTest
+    Private settings As List(Of String) = New List(Of String)()
+
+    Public Property InnerSettings() As List(Of String)
+        Get
+            Return settings
+        End Get
+        Set(ByVal Value As List(Of String))
+            settings = Value
+        End Set
+    End Property
+End Class
+
+&lt;Serializable()&gt; _
+Public Class SerializeTest
+
+    Private m_innerSerializeTest As InnerSerializeTest = New InnerSerializeTest()
+    Public Property InnerTest() As InnerSerializeTest
+        Get
+            Return m_innerSerializeTest
+        End Get
+        Set(ByVal Value As InnerSerializeTest)
+            m_innerSerializeTest = value
+        End Set
+    End Property
+
+    Private m_test As String
+    Public Property TestProperty() As String
+        Get
+            Return m_test
+        End Get
+        Set(ByVal Value As String)
+            m_test = value
+        End Set
+    End Property
+
+    Private m_settings As List(Of String) = New List(Of String)()
+    Public Property Settings() As List(Of String)
+        Get
+            Return m_settings
+        End Get
+        Set(ByVal Value As List(Of String))
+            m_settings = Value
+        End Set
+    End Property
+
+    ' This will not be serialized
+    &lt;NonSerialized()&gt; _
+    Private notSerialized As Integer = 1
+
+
+    Public Sub TryThisExample()
+
+        ' Create an instance and store values
+        Dim test As SerializeTest = New SerializeTest()
+        test.TestProperty = "test 123"
+        test.Settings.Add("ABC")
+        test.Settings.Add("DEF")
+        test.Settings.Add("GHI")
+
+        test.InnerTest.InnerSettings.Add("Inner class test 1")
+        test.InnerTest.InnerSettings.Add("Inner class test 2")
+
+
+        ' Save the data to XML format
+        Dim SerializerOut As XmlSerializer = New XmlSerializer(GetType(SerializeTest))
+        Dim WriteFileStream As TextWriter = New StreamWriter("C:\test.xml")
+        SerializerOut.Serialize(WriteFileStream, test)
+        WriteFileStream.Close()
+
+
+        ' Read the XML file into a new object
+        Dim SerializerIn As XmlSerializer = New XmlSerializer(GetType(SerializeTest))
+        Dim fs As FileStream = New FileStream("C:\test.xml", FileMode.Open, FileAccess.Read, FileShare.Read)
+        Dim loadTest As SerializeTest = CType(SerializerIn.Deserialize(fs), SerializeTest)
+        fs.Close()
+
+
+        ' Examine the loaded values
+        Dim temp As String = (loadTest.TestProperty)
+        Dim Setting As String
+        For Each Setting In loadTest.Settings
+            temp = Setting
+        Next
+
+        Dim InnerSetting As String
+        For Each InnerSetting In loadTest.InnerTest.InnerSettings
+            temp = InnerSetting
+        Next
+
+    End Sub
+
+
+End Class
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Generics</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Generics in VB.net</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Generics</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Generics in VB.net</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Generics, generic, &lt;T&gt;, TKey, TValue</Keywords>
+        <Imports>Imports System.Collections.Generic</Imports>
+        <Code>' 
+'  Use generics when you intend to reuse common code 
+'  that should function the same way for any data type.
+'  Simply use &lt;T&gt; as shown below.
+'  You can use multiple alias data types just by adding
+'  a New letter such as class Test&lt;T&gt;&lt;K&gt;, etc.     
+' 
+
+Class Test(Of T)
+
+    Private values As List(Of T) = New List(Of T)()
+
+    ' The default keyword sets a variable 
+    ' with the appropriate default value.
+    Private m_defaultExample As T = Nothing
+
+    Public Sub AddSomething(ByVal value As T)
+        values.Add(value)
+    End Sub
+
+
+    Public Sub TryThisExample()
+        ' Simple test:
+        Dim test As Test(Of Double) = New Test(Of Double)()
+        test.AddSomething(123)
+
+        ' Advanced test:
+        ' If you want to specify a default value type, use:
+        ' using Test = TestSpace.Test&lt;double&gt;;
+        ' This way you can just write:
+        ' Test test = new Test();
+        ' test.AddSomething(123);
+    End Sub
+
+    ' Note (advanced):
+    ' You can declare the class with a constraint using the "where" keyword.
+    ' class Test&lt;T&gt; where T : new()
+    ' new() requires that the parameter T must have a default constructor.
+    ' struct requires that the default parameter T must have a ValueType.
+    ' class requires that the default parameter T must NOT be a ValueType.
+    ' You can also use a name of a class or interface, such as:
+    ' class Test&lt;T&gt; where T : IMyInterface
+    ' or
+    ' class Test&lt;T&gt; where T : MyClass
+
+End Class</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Dictionary</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Dictionary</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Dictionary, Collection, Lookup, Search</Keywords>
+        <Imports>Imports System.Collections.Generic</Imports>
+        <Code>Imports System.Collections.Generic
+
+' Simple example to show how to use the Dictionary object
+
+Class DictionaryTest
+    Public Sub TryThisExample()
+        ' A dictionary allows you to maintain a set of name/value pairs.
+        Dim dictionary As New Dictionary(Of String, Double)()
+
+        dictionary.Add("Key #1", 123)
+        dictionary.Add("Key #2", 456)
+        dictionary.Add("Key #3", 789)
+
+        ' Now you can retrieve a value by key:            
+        If dictionary.ContainsKey("Key #2") Then
+            Dim value As Double = dictionary("Key #2")
+            Console.WriteLine(value)
+        End If
+    End Sub
+
+End Class</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Delegates</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Delegates</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Delegate, Delegates, Delegation, Delegating, Callback, Callbacks</Keywords>
+        <Imports>Imports System.Collections.Generic</Imports>
+        <Code>
+Public Delegate Function TestDelegate(ByVal x As Integer, ByVal y As Integer) As Integer
+
+Class DelegateTest
+
+    Public Shared Function Add(ByVal x As Integer, ByVal y As Integer) As Integer
+        Return x + y
+    End Function
+
+
+    Public Sub TryThisExample()
+        ' Create an object that points to the Add function.
+        Dim addSomething As TestDelegate = New TestDelegate(AddressOf DelegateTest.Add)
+
+        ' Indirectly invoke the Add method using a delegate object.
+        Console.Write("1 + 2 is {0}", addSomething(1, 2))
+    End Sub
+
+End Class
+
+' See also CallbackTest.vb
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>IComparable</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>IComparable</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Compare, Comparer, Comparable, IComparable</Keywords>
+        <Imports>using System.Collections.Generic</Imports>
+        <Code>' This is a simple example of IComparable for sorting, using one sort order.    
+
+Class CompareTest
+    Implements IComparable
+
+    Private m_someProperty As Integer
+
+    Public Property SomeProperty() As Integer
+        Set(ByVal value As Integer)
+            m_someProperty = value
+        End Set
+        Get
+            Return m_someProperty
+        End Get
+    End Property
+
+    Public Sub New()
+    End Sub
+    Public Sub New(ByVal Value As Integer)
+        SomeProperty = Value
+    End Sub
+
+    ' You can add more sort orders by adding additional objects, such as
+    ' public int CompareTo(object obj1, object obj2, etc.)
+    Public Function CompareTo(ByVal obj As Object) As Integer
+        Dim temp As CompareTest = CType(obj, CompareTest)
+        If Me.SomeProperty &gt; temp.SomeProperty Then
+            Return 1
+        End If
+
+        If Me.SomeProperty &lt; temp.SomeProperty Then
+            Return -1
+        Else
+            Return 0
+        End If
+    End Function
+
+    Public Sub TryThisExample()
+        ' Simple example:
+        ' Create a new array or list and sort it;
+        Dim test As List(Of CompareTest) = New List(Of CompareTest)()
+        test.Add(New CompareTest(123))
+        test.Add(New CompareTest(789))
+        test.Add(New CompareTest(456))
+        test.Sort()
+        Dim value As CompareTest
+        For Each value In test
+            Console.WriteLine(value.SomeProperty)
+        Next
+
+    End Sub
+
+    Public Function CompareTo1(ByVal obj As Object) As Integer Implements System.IComparable.CompareTo
+
+    End Function
+End Class</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Collections</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Using ICloneable to make a deep copy</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Collections</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Using ICloneable to make a deep copy</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords />
+        <Imports />
+        <Code>' Shows how to return a deep copy clone of an object.
+
+Class CloneTest
+    Implements ICloneable
+
+    Private m_someProperty As Integer
+
+    Public Property SomeProperty() As Integer
+        Set(ByVal value As Integer)
+            m_someProperty = value
+        End Set
+        Get
+            Return m_someProperty
+        End Get
+    End Property
+
+    Public Function Clone() As Object
+
+        Dim clone1 As CloneTest = New CloneTest()
+        clone1.SomeProperty = Me.SomeProperty
+        Return clone1
+
+        ' If we only have properties to clone then we 
+        ' could simplify by returning a "shallow" copy:
+        'return this.MemberwiseClone(); 
+    End Function
+
+    Public Sub TryThisExample()
+        ' Clone an object
+        Dim original As CloneTest = New CloneTest()
+        original.SomeProperty = 123
+
+        Dim clone As CloneTest = CType(original.Clone(), CloneTest)
+
+        ' Now both will have the same state:
+        Console.Write(original.SomeProperty)
+        Console.Write(clone.SomeProperty)
+
+    End Sub
+
+    Public Function Clone1() As Object Implements System.ICloneable.Clone
+
+    End Function
+End Class
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>General</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Callbacks in VB.net</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>General</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Callbacks in VB.net</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>CallBacks, CallBack, Call Back, Delegates, Delegate</Keywords>
+        <Imports>Imports System.Collections.General</Imports>
+        <Code>' This simple example shows how an interface can be used as a callback mechanism.
+
+Public Interface ICallbackNotificationTest
+    Sub OnUpdate(ByVal message As String)
+End Interface
+
+Class CallBackTest
+    Implements ICallbackNotificationTest
+
+    Public Sub OnUpdate(ByVal message As String)
+        Console.WriteLine(message)
+    End Sub
+
+    Public Sub TryThisExample()
+        Dim worker As CallBackTestWorker = New CallBackTestWorker()
+        worker.Advise(Me)
+        ' Simulate asynchronous work being done As worker.Test()
+        worker.UnAdvise(Me)
+    End Sub
+
+    Public Sub OnUpdate1(ByVal message As String) Implements ICallbackNotificationTest.OnUpdate
+
+    End Sub
+End Class
+
+Class CallBackTestWorker
+
+    Private m_clientSinks = New List(Of ICallbackNotificationTest)()
+    Private Property ClientSinks() As List(Of ICallbackNotificationTest)
+        Set(ByVal value As List(Of ICallbackNotificationTest))
+            m_clientSinks = value
+        End Set
+        Get
+            Return m_clientSinks
+        End Get
+    End Property
+
+    ' Subscribe the client (in this example, CallBackTest) so that
+    ' it will receive notifications from this worker class.
+    Public Sub Advise(ByVal sink As ICallbackNotificationTest)
+        clientSinks.Add(sink)
+    End Sub
+
+    ' Remove the client (in this example, CallBackTest) so that
+    ' it will not receive any more notifications.
+    Public Sub UnAdvise(ByVal sink As ICallbackNotificationTest)
+        clientSinks.Remove(sink)
+    End Sub
+
+    ' See the callback in action.
+    Public Sub Test()
+        Dim client As ICallbackNotificationTest
+        For Each client In clientSinks
+            client.OnUpdate("It worked")
+        Next
+    End Sub
+
+End Class</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Object Oriented</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Abstract classes</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Object Oriented</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Abstract classes</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Abstract, Interface, NotImplementedException, MustInherit</Keywords>
+        <Imports />
+        <Code> ' An abstract class can contain some common functionality, such as the 
+ ' "YouDontHaveToWriteThisFunctionAgain" method. This function can be called
+ ' from the class that inherits this AbstractTest class using the base keyword:
+ ' base.YouDontHaveToWriteThisFunctionAgain()
+ ' Also the class that inherits this AbstractTest class must implement the other
+ ' functions marked "abstract". That is, the inheriting class must define its
+ ' own function for those abstract members.
+
+
+Public MustInherit Class AbstractTestBase
+    Private Const m_multiplier = 2
+
+    ' The class inheriting AbstractTestBase can call this function by using
+    ' the base keyword: base.YouDontHaveToWriteThisFunctionAgain()
+    ' If you don't intend to have a common, reusable function like this, then
+    ' you shouldn't use an abstract class. Instead, create an interface class.
+    ' NOTE: Use the "public" access modifier instead of "protected" if you want
+    ' to allow the implimenting class to have direct access to this function.
+    Protected Function YouDontHaveToWriteThisFunctionAgain(ByVal value As Integer) As Integer
+        Return value * m_multiplier
+    End Function
+
+    ' The class inheriting this must implement the following function.
+    ' We don't care how it is implemented, just that it is implemented.
+    Public MustOverride Sub YouMustImplementThis()
+End Class
+
+
+
+' Now you can inherit from the AbstractTestBase class and use it like this:
+Public Class TestAbstractClass
+    Inherits AbstractTestBase
+
+    ' The key feature of an abstract class is that you can re-use code from the base:
+    Public Function WrapAndUseAnAbstractMethod(ByVal value As Integer) As Integer
+        Return MyBase.YouDontHaveToWriteThisFunctionAgain(value)
+    End Function
+
+    Public Overrides Sub YouMustImplementThis()
+        ' Add your code here for this function!
+        Throw New NotImplementedException("You have to write code here")
+    End Sub
+End Class</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Shortcuts</Category>
+        <Language>VB.NET</Language>
+        <Public>true</Public>
+        <Name>Reuse similar code based on keys</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Shortcuts</Category>
+          <Language>VB.NET</Language>
+          <Public>true</Public>
+          <Name>Reuse similar code based on keys</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords />
+        <Imports />
+        <Code>Class Test
+
+    Sub Test()
+
+        Dim _first As New List(Of String)
+        Dim _last As New List(Of String)
+
+        For Each sName As String In New String("FirstName", "LastName")
+
+            Dim list As New List(Of String)
+            If sName = "FirstName" Then
+                list = _first
+            Else
+                list = _last
+            End If
+
+            ' Now operate on list the same way you would for either key
+
+        Next
+
+    End Sub
+
+ 
+End Class
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Encryption</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Encryption using Tripple DES</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Encryption</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Encryption using Tripple DES</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords />
+        <Imports />
+        <Code>using System;
+using System.IO;
+using System.Security.Cryptography;
+
+namespace MyNamespace
+{
+  public class Security
+  {
+    private readonly TripleDESCryptoServiceProvider m_des;
+    private readonly byte[] m_iv;
+    private readonly byte[] m_key;
+    private readonly UTF8Encoding m_utf8;
+
+    public Security(byte[] key, byte[] iv)
+    {
+      m_des = new TripleDESCryptoServiceProvider();
+      m_utf8 = new UTF8Encoding();
+      m_key = key;
+      m_iv = iv;
+    }
+
+    public Security()
+    {
+      m_des = new TripleDESCryptoServiceProvider();
+      m_utf8 = new UTF8Encoding();
+      byte[ ] key = new byte[ ]
+                      {
+                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                        17, 18, 19, 20, 21, 22, 23, 24
+                      };
+      byte[ ] iv = new byte[ ] { 8, 7, 6, 5, 4, 3, 2, 1 };
+      m_key = key;
+      m_iv = iv;
+    }
+
+    public byte[] Encrypt(byte[] input)
+    {
+      return Transform(input, m_des.CreateEncryptor(m_key, m_iv));
+    }
+
+    public byte[] Decrypt(byte[] input)
+    {
+      return Transform(input, m_des.CreateDecryptor(m_key, m_iv));
+    }
+
+    public string Encrypt(string text)
+    {
+      byte[ ] input = m_utf8.GetBytes(text);
+      return Convert.ToBase64String(Transform(input, m_des.CreateEncryptor(m_key, m_iv)));
+    }
+
+    public string Decrypt(string text)
+    {
+      byte[ ] input = Convert.FromBase64String(text);
+      byte[ ] output = Transform(input, m_des.CreateDecryptor(m_key, m_iv));
+      return m_utf8.GetString(output);
+    }
+
+    private static byte[] Transform(byte[] input, ICryptoTransform CryptoTransform)
+    {
+      MemoryStream memStream = new MemoryStream();
+      CryptoStream cryptStream = new CryptoStream(memStream, CryptoTransform, CryptoStreamMode.Write);
+      cryptStream.Write(input, 0, input.Length);
+      cryptStream.FlushFinalBlock();
+      memStream.Position = 0L;
+      byte[] result = new byte[((int)(memStream.Length - 1L)) + 1];
+      memStream.Read(result, 0, result.Length);
+      memStream.Close();
+      cryptStream.Close();
+      return result;
+    }
+  }
+}
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Shortcuts</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>Server Variables</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Shortcuts</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>Server Variables</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>ALL_HTTP
+ALL_RAW
+APPL_MD_PATH
+APPL_PHYSICAL_PATH
+AUTH_TYPE
+AUTH_USER
+AUTH_PASSWORD
+LOGON_USER
+REMOTE_USER
+CERT_COOKIE
+CERT_FLAGS
+CERT_ISSUER
+CERT_KEYSIZE
+CERT_SECRETKEYSIZE
+CERT_SERIALNUMBER
+CERT_SERVER_ISSUER
+CERT_SERVER_SUBJECT
+CERT_SUBJECT
+CONTENT_LENGTH
+CONTENT_TYPE
+GATEWAY_INTERFACE
+HTTPS
+HTTPS_KEYSIZE
+HTTPS_SECRETKEYSIZE
+HTTPS_SERVER_ISSUER
+HTTPS_SERVER_SUBJECT
+INSTANCE_ID
+INSTANCE_META_PATH
+LOCAL_ADDR
+PATH_INFO
+PATH_TRANSLATED
+QUERY_STRING
+REMOTE_ADDR
+REMOTE_HOST
+REMOTE_PORT
+REQUEST_METHOD
+SCRIPT_NAME
+SERVER_NAME
+SERVER_PORT
+SERVER_PORT_SECURE
+SERVER_PROTOCOL
+SERVER_SOFTWARE
+URL
+HTTP_CONNECTION
+HTTP_ACCEPT
+HTTP_ACCEPT_ENCODING
+HTTP_FROM
+HTTP_HOST
+HTTP_IF_MODIFIED_SINCE
+HTTP_USER_AGENT</Keywords>
+        <Imports />
+        <Code>&lt;% Response.Write(Request.ServerVariables(ALL_HTTP)) %&gt;
+
+ALL_HTTP
+ALL_RAW
+APPL_MD_PATH
+APPL_PHYSICAL_PATH
+AUTH_TYPE
+AUTH_USER
+AUTH_PASSWORD
+LOGON_USER
+REMOTE_USER
+CERT_COOKIE
+CERT_FLAGS
+CERT_ISSUER
+CERT_KEYSIZE
+CERT_SECRETKEYSIZE
+CERT_SERIALNUMBER
+CERT_SERVER_ISSUER
+CERT_SERVER_SUBJECT
+CERT_SUBJECT
+CONTENT_LENGTH
+CONTENT_TYPE
+GATEWAY_INTERFACE
+HTTPS
+HTTPS_KEYSIZE
+HTTPS_SECRETKEYSIZE
+HTTPS_SERVER_ISSUER
+HTTPS_SERVER_SUBJECT
+INSTANCE_ID
+INSTANCE_META_PATH
+LOCAL_ADDR
+PATH_INFO
+PATH_TRANSLATED
+QUERY_STRING
+REMOTE_ADDR
+REMOTE_HOST
+REMOTE_PORT
+REQUEST_METHOD
+SCRIPT_NAME
+SERVER_NAME
+SERVER_PORT
+SERVER_PORT_SECURE
+SERVER_PROTOCOL
+SERVER_SOFTWARE
+URL
+HTTP_CONNECTION
+HTTP_ACCEPT
+HTTP_ACCEPT_ENCODING
+HTTP_FROM
+HTTP_HOST
+HTTP_IF_MODIFIED_SINCE
+HTTP_USER_AGENT</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Shortcuts</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>Page.IsPostBack </Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Shortcuts</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>Page.IsPostBack </Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Page.IsPostBack, Postback</Keywords>
+        <Imports />
+        <Code>&lt;script  runat="server"&gt;
+Sub Page_Load
+if Not Page.IsPostBack then
+   lbl1.Text="The date and time is " &amp; now()
+end if
+End Sub
+
+Sub submit(s As Object, e As EventArgs)
+lbl2.Text="Hello World!"
+End Sub
+&lt;/script&gt;
+
+&lt;html&gt;
+&lt;body&gt;
+&lt;form runat="server"&gt;
+&lt;h3&gt;&lt;asp:label id="lbl1" runat="server" /&gt;&lt;/h3&gt;
+&lt;h3&gt;&lt;asp:label id="lbl2" runat="server" /&gt;&lt;/h3&gt;
+&lt;asp:button text="Submit" onclick="submit" runat="server" /&gt;
+&lt;/form&gt;
+&lt;/body&gt;
+&lt;/html&gt;</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Validation</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>Field Validator</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Validation</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>Field Validator</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>RequiredFieldValidator, Field validation, validation</Keywords>
+        <Imports />
+        <Code>&lt;html&gt;
+&lt;body&gt;
+
+&lt;form runat="server"&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;
+&lt;table bgcolor="#b0c4de" cellspacing="10"&gt;
+   &lt;tr&gt;
+     &lt;td align="right"&gt;Name:&lt;/td&gt;
+     &lt;td&gt;&lt;asp:TextBox id="txt_name" runat="server"/&gt;&lt;/td&gt;
+     &lt;td&gt;
+     &lt;asp:RequiredFieldValidator
+     ControlToValidate="txt_name" 
+     ErrorMessage="Name"
+     Text="*" 
+     runat="server"/&gt;
+     &lt;/td&gt;
+   &lt;/tr&gt;
+   &lt;tr&gt;
+     &lt;td align="right"&gt;Card Type:&lt;/td&gt;
+     &lt;td&gt;
+     &lt;asp:RadioButtonList id="rlist_type" 
+     RepeatLayout="Flow"
+     runat="server"&gt;
+     &lt;asp:ListItem&gt;Diners&lt;/asp:ListItem&gt;
+     &lt;asp:ListItem&gt;MasterCard&lt;/asp:ListItem&gt;
+     &lt;asp:ListItem&gt;Visa&lt;/asp:ListItem&gt;
+     &lt;/asp:RadioButtonList&gt;
+     &lt;/td&gt;
+     &lt;td&gt;
+     &lt;asp:RequiredFieldValidator
+     ControlToValidate="rlist_type"
+     ErrorMessage="Card Type"
+     InitialValue=""
+     Text="*"
+     runat="server"/&gt;
+     &lt;/td&gt;
+   &lt;/tr&gt;
+   &lt;tr&gt;
+     &lt;td&gt;&lt;/td&gt;
+     &lt;td&gt;&lt;asp:Button id="b1" Text="Submit" runat="server"/&gt;&lt;/td&gt;
+     &lt;td&gt;&lt;/td&gt;
+   &lt;/tr&gt;
+&lt;/table&gt;
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;br /&gt;
+&lt;asp:ValidationSummary
+HeaderText="You must enter a value in the following fields:"
+DisplayMode="BulletList"
+EnableClientScript="true"
+runat="server"/&gt;
+&lt;/form&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Validation</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>Custom Validation</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Validation</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>Custom Validation</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>RequiredFieldValidator, custom validation, validation</Keywords>
+        <Imports />
+        <Code>&lt;script  runat="server"&gt;
+Sub user(source As object,args As ServerValidateEventArgs)
+   if len(args.Value)&lt;8 or len(args.Value)&gt;14 then
+    args.IsValid=false
+   else
+    args.IsValid=true
+   end if
+End Sub
+&lt;/script&gt;     
+
+&lt;html&gt;
+&lt;body&gt;
+
+&lt;form runat="server"&gt;
+&lt;asp:Label runat="server" Text="Enter a username: " /&gt;
+&lt;asp:TextBox id="txtUser" runat="server" /&gt;
+&lt;asp:Button Text="Submit" runat="server"/&gt;
+&lt;br /&gt;
+&lt;asp:Label id="mylabel" runat="server"/&gt;
+&lt;br /&gt;
+&lt;asp:CustomValidator
+ControlToValidate="txtUser"
+OnServerValidate="user"
+Text="A username must be between 8 and 14 characters"
+runat="server"/&gt;
+&lt;/form&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Validation</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>Required field validation</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Validation</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>Required field validation</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords />
+        <Imports />
+        <Code>&lt;html&gt;
+&lt;body&gt;
+
+&lt;form runat="server"&gt;
+Name: &lt;asp:TextBox id="name" runat="server" /&gt;
+&lt;br /&gt;
+Age: &lt;asp:TextBox id="age" runat="server" /&gt;
+&lt;br /&gt;&lt;br /&gt;
+&lt;asp:Button runat="server" Text="Submit" /&gt;
+&lt;br /&gt;&lt;br /&gt;
+&lt;asp:RequiredFieldValidator
+ControlToValidate="name"
+Text="The name field is required!"
+runat="server" /&gt;
+&lt;/form&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Shortcuts</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>Form load</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Shortcuts</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>Form load</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords />
+        <Imports />
+        <Code>&lt;script  runat="server"&gt;
+Sub Page_Load
+   lbl1.Text="The date and time is " &amp; now()
+End Sub
+&lt;/script&gt;
+
+&lt;html&gt;
+&lt;body&gt;
+&lt;form runat="server"&gt;
+&lt;h3&gt;&lt;asp:label id="lbl1" runat="server" /&gt;&lt;/h3&gt;
+&lt;/form&gt;
+&lt;/body&gt;
+&lt;/html&gt;</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Data Binding</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>Hashtable Dropdown List</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Data Binding</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>Hashtable Dropdown List</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords />
+        <Imports />
+        <Code>&lt;script  runat="server"&gt;
+sub Page_Load
+if Not Page.IsPostBack then
+   dim usStates=New Hashtable
+   usStates.Add("A","Arizona")
+   usStates.Add("F","Florida")
+   usStates.Add("N","Nevada")
+   dd.DataSource=usStates
+   dd.DataValueField="Key"
+   dd.DataTextField="Value"
+   dd.DataBind()
+end if
+end sub
+
+sub displayState(s as Object,e As EventArgs)
+lbl1.text="Your favorite state is: " &amp; dd.SelectedItem.Text
+end sub
+&lt;/script&gt;
+
+&lt;html&gt;
+&lt;body&gt;
+
+&lt;form runat="server"&gt;
+&lt;asp:DropDownList id="dd" runat="server"
+AutoPostBack="True" onSelectedIndexChanged="displayState" /&gt;
+&lt;p&gt;&lt;asp:label id="label1" runat="server" /&gt;&lt;/p&gt;
+&lt;/form&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Data Binding</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>ArrayList Radio Buttons</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Data Binding</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>ArrayList Radio Buttons</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords />
+        <Imports />
+        <Code>&lt;script  runat="server"&gt;
+Sub Page_Load
+if Not Page.IsPostBack then
+   dim mystates=New ArrayList
+   mystates.Add("Arizona")
+   mystates.Add("Florida")
+   mystates.Add("Nevada")
+   mystates.TrimToSize()
+   mystates.Sort()
+   rb.DataSource=mystates
+   rb.DataBind()
+end if
+end sub
+
+sub display(s as Object,e As EventArgs)
+lbl1.text="Your favorite state is: " &amp; rb.SelectedItem.Text
+end sub
+&lt;/script&gt;
+
+&lt;html&gt;
+&lt;body&gt;
+
+&lt;form runat="server"&gt;
+&lt;asp:RadioButtonList id="rb" runat="server"
+AutoPostBack="True" onSelectedIndexChanged="display" /&gt;
+&lt;p&gt;&lt;asp:label id="label1" runat="server" /&gt;&lt;/p&gt;
+&lt;/form&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Shortcuts</Category>
+        <Language>ASP</Language>
+        <Public>true</Public>
+        <Name>Calendar</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Shortcuts</Category>
+          <Language>ASP</Language>
+          <Public>true</Public>
+          <Name>Calendar</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords />
+        <Imports />
+        <Code>&lt;html&gt;
+&lt;body&gt;
+
+&lt;form runat="server"&gt;
+&lt;asp:Calendar runat="server" /&gt;
+&lt;/form&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;</Code>
+      </SnippetValue>
+    </value>
+  </item>
+  <item>
+    <key>
+      <SnippetKey xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Category>Lambdas</Category>
+        <Language>C#</Language>
+        <Public>true</Public>
+        <Name>Lambdas for finding values in arrays</Name>
+        <Group>www.snippetmanager.net</Group>
+      </SnippetKey>
+    </key>
+    <value>
+      <SnippetValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Key>
+          <Category>Lambdas</Category>
+          <Language>C#</Language>
+          <Public>true</Public>
+          <Name>Lambdas for finding values in arrays</Name>
+          <Group>www.snippetmanager.net</Group>
+        </Key>
+        <Keywords>Lambda, Lambdas, =&gt;</Keywords>
+        <Imports />
+        <Code>        private void TestLambdas()
+        {
+
+            // Using lambdas to find values inside arrays
+
+            // A number example
+            List&lt;int&gt; values = new List&lt;int&gt;();
+            values.Add(1);
+            values.Add(2);
+            values.Add(3);
+            // Use a lambda to build a list:
+            List&lt;int&gt; found = values.FindAll(val =&gt; val != 2);
+
+
+            // A string example
+            List&lt;string&gt; people = new List&lt;string&gt;();
+            people.Add("John Doe");
+            people.Add("Jane Doe");
+            people.Add("Sparky Dog");
+            // Use a lambda to find the person:
+            string foundPerson = people.Find(person =&gt; person.Contains("John"));
+
+            // Which is the same as the old way of doing it in .NET 2.0:
+            string foundPerson2 = people.Find(delegate(String s) { return s.Contains("Jane"); });
+
+
+            // Another silly example
+            int[] numbers = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            int oddNumbers = numbers.Count(n =&gt; n % 2 == 1);
+            var lessThan5 = numbers.TakeWhile(n =&gt; n &lt; 5);
+
+
+            // CAUTION: Don't overuse lambdas to the point they make 
+            // your code unreadable and non-portable.
+
+        }</Code>
+      </SnippetValue>
+    </value>
+  </item>
+</dictionary>
